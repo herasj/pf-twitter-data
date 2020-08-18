@@ -56,7 +56,8 @@ def removeStopWords(sentence: str):
 
 def stanford_lemma(text):
   doc = stanLemma(text)
-  return ' '.join([word.lemma for sent in doc.sentences for word in sent.words])
+  doc = ' '.join([word.lemma for sent in doc.sentences for word in sent.words])
+  return removeAccentMarks(doc)
 
 #Remove punctuation, hashtags, mentions, accent marks and stopwords.
 for row, element in enumerate(tweetsDF['text']) :
