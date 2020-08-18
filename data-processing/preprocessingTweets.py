@@ -83,5 +83,6 @@ tokenizer.fit_on_texts(tweets)
 word_index = tokenizer.word_index
 sequences = tokenizer.texts_to_sequences(tweets)
 pad_seq = pad_sequences(sequences, padding='post')
-print(pad_seq)
+tweets = pd.DataFrame(tweets, columns=["tweets"])
+tweets.to_csv("/home/kodewill/PF/pf-twitter-data/Data/tweetsTokens.csv", sep=',',index=False)
 
