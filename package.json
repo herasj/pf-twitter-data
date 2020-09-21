@@ -22,7 +22,7 @@
     "typescript": "^3.9.7"
   },
   "dependencies": {
-    "aws-sdk": "^2.733.0",
+    "aws-sdk": "^2.756.0",
     "dotenv": "^8.2.0",
     "lodash": "^4.17.20",
     "moment": "^2.27.0",

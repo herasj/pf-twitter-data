@@ -4,4 +4,6 @@ export interface IEnvironment {
     twitterSecret: string;
     twitterToken: string;
     twitterAccessSecret: string;
+    awsAccess: string;
+    awsSecret: string
 }
