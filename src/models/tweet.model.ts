@@ -1,5 +1,25 @@
 import { Schema, model } from "mongoose";
-import { ITweets, ITweetsModel } from "../interfaces/schemas/tweets.interfaces";
+import {
+  ITweets,
+  ITweetsModel,
+  ISentiment,
+} from "../interfaces/schemas/tweets.interfaces";
+
+const SentimentSchema = new Schema<ISentiment>(
+  {
+    predominant: { type: String, required: true },
+    positive: { type: Number, required: true },
+    negative: { type: Number, required: true },
+    neutral: { type: Number, required: true },
+    mixed: { type: Number, required: true },
+  },
+  {
+    _id: false,
+    versionKey: false,
+    id: false,
+    timestamps: true,
+  }
+);
 
 const TweetSchema = new Schema<ITweets>(
   {
@@ -11,6 +31,7 @@ const TweetSchema = new Schema<ITweets>(
     retweets: { type: Number, required: true },
     favorites: { type: Number, required: true },
     hashtag: { type: String, required: true },
+    sentimentScore: SentimentSchema,
   },
   { id: false, versionKey: false }
 );

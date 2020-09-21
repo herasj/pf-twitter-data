@@ -1,22 +1,24 @@
-import Twitter from "twitter-lite";
+import { ComprehendService } from "../config/aws/comprehend/comprehend.service";
 import { environment } from "../config/environment/environment";
 import { IStreamTweet } from "../interfaces/tweet.interface";
 import { TweetService } from "./tweet";
 import { UserService } from "./user";
-import moment from "moment";
+import Twitter from "twitter-lite";
 
 export class TrendingService {
   private twitter: Twitter;
-  private tweetService: TweetService;
   private userService: UserService;
+  private tweetService: TweetService;
   private parameters: { track: string };
+  private comprehendService: ComprehendService;
 
   constructor() {
     this.twitter = this.setup();
     this.tweetService = new TweetService();
     this.userService = new UserService();
+    this.comprehendService = new ComprehendService();
     this.parameters = {
-      track: "Duque",
+      track: "#21Sep",
     };
   }
 
@@ -38,6 +40,17 @@ export class TrendingService {
           if (tweet.extended_tweet) {
             if (tweet.extended_tweet.full_text)
               try {
+                const sentiment = await this.comprehendService.analyzeSentiment(
+                  tweet.extended_tweet.full_text,
+                  "es"
+                );
+                console.dir({
+                  mixed: sentiment.SentimentScore.Mixed,
+                  negative: sentiment.SentimentScore.Negative,
+                  neutral: sentiment.SentimentScore.Neutral,
+                  positive: sentiment.SentimentScore.Positive,
+                  predominant: sentiment.Sentiment,
+                });
                 await this.tweetService.create({
                   userId: tweet.user.id_str,
                   tweetId: tweet.id_str,
@@ -47,6 +60,13 @@ export class TrendingService {
                   replies: tweet.reply_count,
                   retweets: tweet.retweet_count,
                   hashtag: this.parameters.track,
+                  sentimentScore: {
+                    mixed: sentiment.SentimentScore.Mixed,
+                    negative: sentiment.SentimentScore.Negative,
+                    neutral: sentiment.SentimentScore.Neutral,
+                    positive: sentiment.SentimentScore.Positive,
+                    predominant: sentiment.Sentiment,
+                  },
                 });
                 await this.userService.create({
                   url: tweet.user.url,
@@ -72,6 +92,17 @@ export class TrendingService {
               if (tweet.retweeted_status.extended_tweet)
                 if (tweet.retweeted_status.extended_tweet.full_text) {
                   try {
+                    const sentiment = await this.comprehendService.analyzeSentiment(
+                      tweet.retweeted_status.extended_tweet.full_text,
+                      "es"
+                    );
+                    console.dir({
+                      mixed: sentiment.SentimentScore.Mixed,
+                      negative: sentiment.SentimentScore.Negative,
+                      neutral: sentiment.SentimentScore.Neutral,
+                      positive: sentiment.SentimentScore.Positive,
+                      predominant: sentiment.Sentiment,
+                    });
                     await this.tweetService.create({
                       userId: tweet.retweeted_status.user.id_str,
                       tweetId: tweet.retweeted_status.id_str,
@@ -81,6 +112,13 @@ export class TrendingService {
                       replies: tweet.retweeted_status.reply_count,
                       retweets: tweet.retweeted_status.retweet_count,
                       hashtag: this.parameters.track,
+                      sentimentScore: {
+                        mixed: sentiment.SentimentScore.Mixed,
+                        negative: sentiment.SentimentScore.Negative,
+                        neutral: sentiment.SentimentScore.Neutral,
+                        positive: sentiment.SentimentScore.Positive,
+                        predominant: sentiment.Sentiment,
+                      },
                     });
                     await this.userService.create({
                       url: tweet.retweeted_status.user.url,

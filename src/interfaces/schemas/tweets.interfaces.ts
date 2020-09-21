@@ -8,6 +8,15 @@ export interface ITweetsModel extends Document {
   retweets: number;
   favorites: number;
   hashtag: string;
+  sentimentScore: ISentiment;
+}
+
+export interface ISentiment {
+  predominant: string;
+  positive: number;
+  negative: number;
+  neutral: number;
+  mixed: number;
 }
 
 export interface ITweets {
@@ -19,4 +28,5 @@ export interface ITweets {
   retweets: number;
   favorites: number;
   hashtag: string;
+  sentimentScore: ISentiment;
 }
