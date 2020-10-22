@@ -2,7 +2,7 @@ export interface IStreamTweet {
   id_str: string;
   created_at: string;
   geo: any;
-  place: any;
+  place: IPlaces;
   coordinates: any;
   user: IUser;
   retweeted_status?: IRetweeted;
@@ -41,4 +41,16 @@ interface IRetweeted {
   reply_count: number;
   retweet_count: number;
   favorite_count: number;
+}
+
+interface IPlaces {
+  id: string;
+  url: string;
+  place_type: string;
+  name: string;
+  full_name: string;
+  country_code: string;
+  country: string;
+  bounding_box: any;
+  attributes: {};
 }

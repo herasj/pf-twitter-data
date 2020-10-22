@@ -8,6 +8,8 @@ export interface ITweetsModel extends Document {
   retweets: number;
   favorites: number;
   hashtag: string;
+  location: ILocation;
+  url?: string;
   sentimentScore: ISentiment;
 }
 
@@ -28,5 +30,12 @@ export interface ITweets {
   retweets: number;
   favorites: number;
   hashtag: string;
+  location: ILocation;
+  url?: string;
   sentimentScore: ISentiment;
+}
+
+export interface ILocation {
+  latitude: number;
+  longitude: number;
 }

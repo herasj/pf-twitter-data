@@ -1,8 +1,9 @@
 import { Schema, model } from "mongoose";
 import {
   ITweets,
-  ITweetsModel,
+  ILocation,
   ISentiment,
+  ITweetsModel,
 } from "../interfaces/schemas/tweets.interfaces";
 
 const SentimentSchema = new Schema<ISentiment>(
@@ -21,6 +22,17 @@ const SentimentSchema = new Schema<ISentiment>(
   }
 );
 
+const LocationSchema = new Schema<ILocation>(
+  {
+    longitude: { type: Number, required: true },
+    latitude: { type: Number, required: true },
+  },
+  {
+    _id: false,
+    versionKey: false,
+  }
+);
+
 const TweetSchema = new Schema<ITweets>(
   {
     tweetId: { type: String, required: true },
@@ -31,6 +43,8 @@ const TweetSchema = new Schema<ITweets>(
     retweets: { type: Number, required: true },
     favorites: { type: Number, required: true },
     hashtag: { type: String, required: true },
+    url: { type: String, required: false },
+    location: LocationSchema,
     sentimentScore: SentimentSchema,
   },
   { id: false, versionKey: false }

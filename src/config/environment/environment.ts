@@ -1,5 +1,5 @@
 import { IEnvironment } from "../../interfaces/config/environment.interface";
-require("dotenv").config(); 
+require("dotenv").config();
 
 export const environment: IEnvironment = {
   mongoUri: process.env.MONGO_URI,
@@ -8,5 +8,6 @@ export const environment: IEnvironment = {
   twitterToken: process.env.TWITTER_ACCESS_TOKEN,
   twitterAccessSecret: process.env.TWITTER_ACCESS_SECRET,
   awsAccess: process.env.AWS_ACCESS,
-  awsSecret: process.env.AWS_SECRET
+  awsSecret: process.env.AWS_SECRET,
+  googleKey: process.env.GOOGLE_KEY,
 };
