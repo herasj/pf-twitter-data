@@ -33,8 +33,13 @@ from gensim.test.utils import get_tmpfile
 from keras.models import Sequential
 from keras import layers
 
-#Import the csv which is going to be processed 
-tweetsDF = pd.read_csv("/home/kodewill/PF/pf-twitter-data/Data/tweetsFirst.csv")
+#Save object
+import pickle 
+def save_obj(obj, name ):
+    with open('predict_scripts/'+ name + '.pkl', 'wb') as f:
+        pickle.dump(obj, f, 0)
+
+
 
 
 #Get rid of punctuation 
@@ -92,6 +97,18 @@ def addInfoArray(infoRow):
     array[6] = infoRow['sentimentScore.negative']
     return array 
 
+def addInfo(infoRow, frameRow):
+    index = len(frameRow)
+    tempRow = frameRow
+    tempRow[index + 0] = infoRow['favorites']
+    tempRow[index + 1] = infoRow['replies']
+    tempRow[index + 2] = infoRow['retweets']
+    tempRow[index + 3] = infoRow['sentimentScore.mixed']
+    tempRow[index + 4] = infoRow['sentimentScore.neutral']
+    tempRow[index + 5] = infoRow['sentimentScore.positive']
+    tempRow[index + 6] = infoRow['sentimentScore.negative']
+    return tempRow 
+
 def split_dataset(X, y):
     #Class weights for unbalanced data set
     total = np.size(X)
@@ -117,12 +134,19 @@ def EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, inpu
     model.compile(loss='binary_crossentropy',optimizer=tf.keras.optimizers.Adam(learning_rate = lr), 
                   metrics=['accuracy'])
     model.summary()
-    
+    model.save(
+        filepath,
+        overwrite=False,
+        include_optimizer=True,
+        save_format=None,
+        signatures=None,
+        options=None,
+        )
     history = model.fit(X_train, y_train, epochs=num_epochs, validation_data=(X_test, y_test), verbose=2)
 
     loss, accuracy = model.evaluate(X_test, y_test)
     
-    return model, accuracy
+    return accuracy
 
 #First Model for (Word2Vec)
 
@@ -138,14 +162,28 @@ def CNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape,
                       metrics=['accuracy'])
 
     model.summary()
-    
+    model.save(
+        filepath,
+        overwrite=False,
+        include_optimizer=True,
+        save_format=None,
+        signatures=None,
+        options=None,
+        )
+
     loss, accuracy = model.evaluate(X_test, y_test)
     
-    return model, accuracy
+    return accuracy
 
+#Import the csv which is going to be processed 
+tweetsDF = pd.read_csv("/home/kodewill/PF/pf-twitter-data/Data/tweetsFirst.csv")
+filepath = '/home/kodewill/PF/pf-twitter-data/models/'
 
 finalTweets = {}
 delRow = []
+# sentiment = ['sentimentScore.mixed', 'sentimentScore.negative', 'sentimentScore.neutral', 'sentimentScore.positive', 'sentimentScore.predominant']
+# sentimentMap = {'NEGATIVE': '-1', 'MIXED': '-0.5', 'NEUTRAL': '0', 'POSITIVE': '1'}
+# sentimentsRows = []
 #Remove punctuation, hashtags, mentions, accent marks and stopwords.
 for row, element in enumerate(tweetsDF.iterrows()) :
     tempString = removeLinks(tweetsDF['text'][row])
@@ -157,6 +195,8 @@ for row, element in enumerate(tweetsDF.iterrows()) :
     if(len(tempString)>1):
         tempString = stanford_lemma(tempString)
         if(len(tempString) > 0):
+            # tempSentiment = [tweetsDF[sentiment[0]][row], tweetsDF[sentiment[1]][row], tweetsDF[sentiment[2]][row], tweetsDF[sentiment[3]][row], sentimentMap[tweetsDF[sentiment[4]][row]]]
+            # sentimentsRows.append(tempSentiment)
             finalTweets[row] = {'political': tweetsDF['political'][row], 'tweet': tempString}
     else:
         delRow.append(row)
@@ -177,6 +217,10 @@ word_index = tokenizer.word_index
 sequences = tokenizer.texts_to_sequences(tweets)
 pad_seq = pad_sequences(sequences, padding='post')
 tweets = pd.DataFrame(pad_seq)
+#Add aditional information (Amazon sentiment analysis)
+    
+
+    
 
 #word2vec
 tokenizedTweets = {index: tokenizeTweet(innerDict['tweet']) for index, innerDict in finalTweets.items()}
@@ -237,7 +281,6 @@ input_shape = np.shape(X)[1]
 dropout = None
 lr = 0.005
 num_epochs = 50
-model, accuracy = EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, vocab_size, embedding_dim, num_epochs)
 
 #Confusion matrix 
 from sklearn.metrics import confusion_matrix
