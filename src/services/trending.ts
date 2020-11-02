@@ -21,7 +21,7 @@ export class TrendingService {
     this.userService = new UserService();
     this.comprehendService = new ComprehendService();
     this.parameters = {
-      track: "",
+      track: "#FirmesConElReferendo,Uribe,Odebrecht,Ernesto Macías",
       locations: "-78.473824,1.073885,-70.124214,12.573362",
       language: "es",
     };
@@ -41,19 +41,19 @@ export class TrendingService {
   };
 
   public stream = async () => {
-    try {
-      const trends: ITrends[] = await this.twitter.get("trends/place", {
-        id: 368148,
-      });
-      let track = "";
-      for (let trend of trends[0].trends) {
-        track += `${trend.name},`;
-      }
-      this.parameters.track = track.substring(0, track.length - 1);
-    } catch (error) {
-      console.error(error.response);
-      throw new Error("Trending error");
-    }
+    // try {
+    //   const trends: ITrends[] = await this.twitter.get("trends/place", {
+    //     id: 368148,
+    //   });
+    //   let track = "";
+    //   for (let trend of trends[0].trends) {
+    //     track += `${trend.name},`;
+    //   }
+    //   this.parameters.track = track.substring(0, track.length - 1);
+    // } catch (error) {
+    //   console.error(error.response);
+    //   throw new Error("Trending error");
+    // }
 
     this.twitter
       .stream("statuses/filter", this.parameters)
