@@ -1,4 +1,5 @@
-#Pandas to handle csv and dataframes
+#Pandas and numpy to handle csv and dataframes and other data structures
+import numpy as np
 import pandas as pd 
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -14,14 +15,23 @@ from nltk.tokenize import word_tokenize # Word to tokens
 
 # Word to tokens
 import tensorflow as tf
-from tensorflow import keras 
 from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 
-#Plots
-import matplotlib.pyplot as plt
-from kneed import KneeLocator
-from sklearn.metrics import silhouette_score, adjusted_rand_score
+#Prepare data
+from sklearn.model_selection import train_test_split
+from sklearn import preprocessing
+
+#word2vec
+import warnings   
+warnings.filterwarnings(action = 'ignore')   
+import gensim 
+from gensim.models import Word2Vec 
+from gensim.test.utils import get_tmpfile
+
+#DNN
+from keras.models import Sequential
+from keras import layers
 
 #Import the csv which is going to be processed 
 tweetsDF = pd.read_csv("/home/kodewill/PF/pf-twitter-data/Data/tweetsFirst.csv")
@@ -65,8 +75,79 @@ def stanford_lemma(text):
   doc = ' '.join([word.lemma for sent in doc.sentences for word in sent.words  if word.upos != 'DET' and word.upos != 'PRON'])
   return doc.upper()
 
+def tokenizeTweet(tweet: str)->list:
+    # tweet = re.sub(r'[^a-zA-Z0-9\s]', ' ', tweet)
+    tokens = [token for token in tweet.split(" ") if token != ""]
+    return tokens
+
+#Function to add an array with extra information (sentiment scores, replies, fav and retweets)
+def addInfoArray(infoRow):
+    array = np.zeros(100)
+    array[0] = infoRow['favorites']
+    array[1] = infoRow['replies']
+    array[2] = infoRow['retweets']
+    array[3] = infoRow['sentimentScore.mixed']
+    array[4] = infoRow['sentimentScore.neutral']
+    array[5] = infoRow['sentimentScore.positive']
+    array[6] = infoRow['sentimentScore.negative']
+    return array 
+
+def split_dataset(X, y):
+    #Class weights for unbalanced data set
+    total = np.size(X)
+    pos = sum(y)
+    neg = total - pos
+    weight_for_0 = (1 / neg)*(total)/2.0 
+    weight_for_1 = (1 / pos)*(total)/2.0    
+    class_weight = {0: weight_for_0, 1: weight_for_1}
+
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.26)
+    y_train = np.asarray(y_train)
+    y_test = np.asarray(y_test)
+    return X_train, X_test, y_train, y_test, class_weight
+
+#Simple generic embedding model
+def EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, vocab_size, embedding_dim, num_epochs):
+    model = tf.keras.Sequential([
+        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=input_shape),
+        tf.keras.layers.GlobalAveragePooling1D(),
+        tf.keras.layers.Dense(num_units, activation=actOne),
+        tf.keras.layers.Dense(1, activation=actTwo)
+    ])
+    model.compile(loss='binary_crossentropy',optimizer=tf.keras.optimizers.Adam(learning_rate = lr), 
+                  metrics=['accuracy'])
+    model.summary()
+    
+    history = model.fit(X_train, y_train, epochs=num_epochs, validation_data=(X_test, y_test), verbose=2)
+
+    loss, accuracy = model.evaluate(X_test, y_test)
+    
+    return model, accuracy
+
+#First Model for (Word2Vec)
+
+def CNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, actThree):
+    model = Sequential()
+    model.add(layers.Conv1D(num_units, 1, activation=actOne, input_shape=input_shape))
+    model.add(layers.GlobalMaxPooling1D())
+    model.add(layers.Dense(10, activation=actTwo))
+    model.add(layers.Dropout(dropout))
+    model.add(layers.Dense(6, activation=actThree))
+    model.compile(optimizer= tf.keras.optimizers.Adam(learning_rate = lr),
+                      loss='binary_crossentropy',
+                      metrics=['accuracy'])
+
+    model.summary()
+    
+    loss, accuracy = model.evaluate(X_test, y_test)
+    
+    return model, accuracy
+
+
+finalTweets = {}
+delRow = []
 #Remove punctuation, hashtags, mentions, accent marks and stopwords.
-for row, element in enumerate(tweetsDF['text']) :
+for row, element in enumerate(tweetsDF.iterrows()) :
     tempString = removeLinks(tweetsDF['text'][row])
     tempString = removeHashtag(tempString)
     tempString = removeStopWords(tempString)
@@ -74,56 +155,116 @@ for row, element in enumerate(tweetsDF['text']) :
     
     #Validate and drop empty text after processing
     if(len(tempString)>1):
-        tweetsDF['text'].loc[row] = tempString
+        tempString = stanford_lemma(tempString)
+        if(len(tempString) > 0):
+            finalTweets[row] = {'political': tweetsDF['political'][row], 'tweet': tempString}
     else:
-        tweetsDF['text'].drop([row])
-    
-# Lemmatization of dataframe
-tweetsDF['text'] = tweetsDF['text'].apply(lambda x: stanford_lemma(x))
+        delRow.append(row)
+
+tweetsDF = tweetsDF.drop(delRow) 
 
 # Tokenize
-tweets = tweetsDF['text'].tolist()
-tokenizer = Tokenizer(num_words = 1000, oov_token="<OOV>")
+vocab_size = 2000
+embedding_dim = 64
+max_length = 500
+padding_type='post'
+oov_tok = "<OOV>"
+
+tweets = [innerDict['tweet'] for row, innerDict in finalTweets.items()]
+tokenizer = Tokenizer(num_words = vocab_size, oov_token=oov_tok)
 tokenizer.fit_on_texts(tweets)
 word_index = tokenizer.word_index
 sequences = tokenizer.texts_to_sequences(tweets)
 pad_seq = pad_sequences(sequences, padding='post')
 tweets = pd.DataFrame(pad_seq)
 
-#Data clustering 
+#word2vec
+tokenizedTweets = {index: tokenizeTweet(innerDict['tweet']) for index, innerDict in finalTweets.items()}
+tokenizedTweets = list(tokenizedTweets.values())
+path = get_tmpfile("word2vec.model")
+model = Word2Vec(tokenizedTweets, window=5, min_count=3, workers=4)
+model.save("word2vec.model")
+wordVectors = model.wv
 
-def opticsCluster(data: list):
-  from sklearn.cluster import OPTICS
-  clustering = OPTICS(min_samples=3).fit(data)
-  return clustering.labels_
+tweetVectors = {}
+numExcep = 0
+padder = np.zeros(100)
+maxim = 0
+count = 0
 
-def kmeansCluster(data: list, nClusters: int) -> tuple:
-  from sklearn.cluster import KMeans
-  clustering = KMeans(n_clusters= nClusters, init='k-means++', n_init=10, 
-                      max_iter=300, tol=0.0001, precompute_distances='deprecated', 
-                      verbose=0, random_state=None, copy_x=True, 
-                      n_jobs='deprecated', algorithm='auto').fit(data)
-  return (clustering.labels_, clustering.inertia_)
+for index, tokenList in enumerate(tokenizedTweets):
+    
+    vecList = []
+    for word in tokenList:
+        try:
+            tempVec = np.asarray(wordVectors.word_vec(word))
+            vecList.append(tempVec)
+        except:
+            numExcep += 1
+    
+    #Encontrar el número máximo de palabras en un tweet            
+    if(len(vecList) > maxim):
+        maxim = len(vecList)
+    
+    if(len(vecList)  > 0):        
+        tweetVectors[index] = np.asarray(vecList)
 
-labels, sse = kmeansCluster(tweets, 2)
+#Add a padder to have all arrays with the same shape
+for index, palabras in tweetVectors.items():
+    tempLen = len(tweetVectors[index])
+    tempArray = addInfoArray(tweetsDF.iloc[index])
+    tweetVectors[index] = np.concatenate((tweetVectors[index], [tempArray]), axis=0)
+    if(tempLen < maxim and tempLen > 0):
+        for i in range (0, maxim - tempLen):
+            tweetVectors[index] = np.concatenate((tweetVectors[index], [padder]), axis=0)
+tweetsVectorsList = []
 
-oneType = labels == 0
-twoType = labels == 1
+for tweet in tweetVectors.values() :
+    tweetsVectorsList.append(tweet)
 
-print('----------------------------------')
-print('tipo 1')
-print('')
+tweetsVectorsList = np.array(tweetsVectorsList)
 
-for i, tweet in enumerate(tweetsDF['text']):
-    if(oneType[i]):
-        print(tweet)
-        
-print('')
-print('')
-print('----------------------------------')
-print('tipo 2')
-print('')
+#Embedding model call
 
-for i, tweet in enumerate(tweetsDF['text']):
-    if(twoType[i]):
-        print(tweet)
+X = np.array(tweets)
+y = [1 if innerDict['political'] else 0 for row, innerDict in finalTweets.items()]
+y = np.array(y)
+X_train, X_test, y_train, y_test, class_weights = split_dataset(X,y)
+num_units = 32
+actOne = 'relu'
+actTwo = 'sigmoid'
+input_shape = np.shape(X)[1]
+dropout = None
+lr = 0.005
+num_epochs = 50
+model, accuracy = EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, vocab_size, embedding_dim, num_epochs)
+
+#Confusion matrix 
+from sklearn.metrics import confusion_matrix
+from sklearn.metrics import plot_confusion_matrix
+import matplotlib.pyplot as plt
+
+y_pred = model.predict(X_test)
+y_pred = np.array([1 if row > 0.5 else 0 for row in y_pred])
+y_test = np.array(y_test)
+
+conf_matrix = confusion_matrix(y_test, y_pred)
+conf_matrix_norm = confusion_matrix(y_test, y_pred, normalize = 'true')
+
+#Plot confusion matrix
+class_names = ['NO POLÍTICO', 'POLÍTICO']
+import seaborn as sn
+import matplotlib.pyplot as plt
+
+#Conf matrix
+df_cm = pd.DataFrame(conf_matrix, index = class_names,
+                  columns = class_names)
+plt.figure(figsize = (10,7))
+sn.heatmap(df_cm, annot=True)
+
+#conf matrix normalized
+df_cm = pd.DataFrame(conf_matrix_norm, index = class_names,
+                  columns = class_names)
+plt.figure(figsize = (10,7))
+sn.heatmap(df_cm, annot=True)
+
