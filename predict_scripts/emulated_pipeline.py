@@ -83,7 +83,8 @@ def text_to_tokens(tweet: str):
     
     
 def predict_class(tweet: str):
-    model = keras.models.load_model("./models/")
+    model = tf.keras.models.load_model("./models",compile=True)
+
     input_lenght = model.get_layer(index = 0).get_config()['input_length']
     input_tweet = text_to_tokens(tweet)
     tweet_length = len(input_tweet)
@@ -92,4 +93,9 @@ def predict_class(tweet: str):
             input_tweet.append(0)
     input_tweet = np.array(input_tweet)            
     input_tweet = input_tweet[:, np.newaxis]
-    return model.predict(input_tweet)
+    shape = np.shape(input_tweet)
+    input_tweet = np.reshape(input_tweet, (shape[1], shape[0]))
+    prediction = model.predict(input_tweet)
+    prediction = prediction[0][0]
+    return prediction
+

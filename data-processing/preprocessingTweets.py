@@ -39,9 +39,6 @@ def save_obj(obj, name ):
     with open('predict_scripts/'+ name + '.pkl', 'wb') as f:
         pickle.dump(obj, f, 0)
 
-
-
-
 #Get rid of punctuation 
 def removePunctuation(tweet: str)->str:
     tweet = re.sub(r'[^\w\s]', '', tweet)
@@ -129,21 +126,14 @@ def EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, inpu
         tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=input_shape),
         tf.keras.layers.GlobalAveragePooling1D(),
         tf.keras.layers.Dense(num_units, activation=actOne),
+        tf.keras.layers.Dropout(dropout),
         tf.keras.layers.Dense(1, activation=actTwo)
     ])
     model.compile(loss='binary_crossentropy',optimizer=tf.keras.optimizers.Adam(learning_rate = lr), 
                   metrics=['accuracy'])
     model.summary()
-    model.save(
-        filepath,
-        overwrite=False,
-        include_optimizer=True,
-        save_format=None,
-        signatures=None,
-        options=None,
-        )
     history = model.fit(X_train, y_train, epochs=num_epochs, validation_data=(X_test, y_test), verbose=2)
-
+    tf.keras.models.save_model(model, filepath)
     loss, accuracy = model.evaluate(X_test, y_test)
     
     return accuracy
@@ -204,7 +194,7 @@ for row, element in enumerate(tweetsDF.iterrows()) :
 tweetsDF = tweetsDF.drop(delRow) 
 
 # Tokenize
-vocab_size = 2000
+vocab_size = 5000
 embedding_dim = 64
 max_length = 500
 padding_type='post'
@@ -278,9 +268,11 @@ num_units = 32
 actOne = 'relu'
 actTwo = 'sigmoid'
 input_shape = np.shape(X)[1]
-dropout = None
+dropout = 0.3
 lr = 0.005
 num_epochs = 50
+
+accuracy = EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, vocab_size, embedding_dim, num_epochs)
 
 #Confusion matrix 
 from sklearn.metrics import confusion_matrix
