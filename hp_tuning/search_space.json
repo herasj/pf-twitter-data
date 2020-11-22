@@ -1,0 +1,46 @@
+{   
+    "num_units": {
+        "_type":"choice",
+        "_value":[16, 32, 64, 128]
+    },
+    
+    "test_sizes": {
+        "_type":"uniform",
+        "_value":[0.2, 0.3]
+    },
+
+    "activationOne": {
+        "_type": "choice",
+        "_value":["relu", "sigmoid"]
+    },
+    
+    "activationTwo": {
+        "_type": "choice",
+        "_value":["softmax", "sigmoid"]
+    },
+       
+     "dropout_rate": {
+        "_type":"uniform",
+        "_value":[0.1, 0.6]
+    },
+    
+     "lr": {
+        "_type":"uniform",
+        "_value":[0.0001, 0.01]
+    },
+    
+    "batch_size": {
+        "_type": "uniform",
+        "_value": [15, 50]
+    },
+    
+    "embedding_dim": {
+        "_type": "choice",
+        "_value": [32, 64, 128, 256]
+    },
+    
+    "lossF": {
+        "_type": "choice",
+        "_value": ["mse", "binary_crossentropy"]
+    }
+}

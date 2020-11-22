@@ -14,6 +14,19 @@ from nltk.corpus import stopwords # Usado para eliminar las stopwords
 import stanza 
 stanLemma = stanza.Pipeline(processors='tokenize,mwt,pos,lemma', lang='es', use_gpu=False)
 from nltk.tokenize import word_tokenize # Word to tokens
+import keras.backend as K
+
+threshold = 0.0049
+
+def get_f1(y_true, y_pred): #taken from old keras source code
+    true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
+    possible_positives = K.sum(K.round(K.clip(y_true, 0, 1)))
+    predicted_positives = K.sum(K.round(K.clip(y_pred, 0, 1)))
+    precision = true_positives / (predicted_positives + K.epsilon())
+    recall = true_positives / (possible_positives + K.epsilon())
+    f1_val = 2*(precision*recall)/(precision+recall+K.epsilon())
+    return f1_val
+
 def load_obj(name):
     with open('./' + name + '.pkl', 'rb') as f:
         return pickle.load(f)
@@ -64,12 +77,37 @@ def convert_to_tokens(tempString, words_bag):
             tokens.append(words_bag[word])
     return tokens
 
-def text_to_tokens(tweet: str):
-    default = np.zeros(37)
+
+
+def clean_tweet(tweet: str) -> str:
     tempString = removeLinks(tweet)
     tempString = removeHashtag(tempString)
     tempString = removeStopWords(tempString)
     tempString = removePunctuation(tempString)
+    tempString = re.sub("\w+\d\w*|\w*\d\w+| \d", "", tempString)
+    tempString = re.sub(" \w{1} ", " ", tempString)
+    tempString = re.sub(" +NARCO\w", " NARCO", tempString)
+    tempString = re.sub(" +IZQUIER\w", " IZQUIERDA", tempString)
+    tempString = re.sub(" +IV(Á|A)N\w", " IVÁN", tempString)
+    tempString = re.sub(" (J+|A+J|E+J)+ ", " RISA", tempString)
+    tempString = re.sub(" +(URIBES\w+| *URIBIS\w+)", " URIBISTA", tempString)
+    tempString = re.sub(" +(((Á|A)LVARO))? URIBE V(E|É)LEZ", " URIBE", tempString)
+    tempString = re.sub(" +(PETRO\w+|PETRIS\w+)", " PETRISTA", tempString)
+    tempString = re.sub(" POLOMB\w+", " CHISTE COLOMBIA", tempString)
+    tempString = re.sub(" HIJUEP\w+", " INSULTO", tempString)
+    tempString = re.sub(" BOBO", " INSULTO", tempString)
+    tempString = re.sub(" HP", " INSULTO", tempString)
+    if(len(tempString)>1):
+        tempString = stanford_lemma(tempString)
+        if(len(tempString) > 0):
+            return tempString
+    else:
+        return None
+    return None  
+
+def text_to_tokens(tweet: str):
+    default = np.zeros(24)
+    tempString = clean_tweet(tweet)
     words_bag = load_obj("word_bag")
     #Validate and drop empty text after processing
     if(len(tempString)>1):
@@ -79,12 +117,19 @@ def text_to_tokens(tweet: str):
             tempString = convert_to_tokens(tempString, words_bag)
             return tempString
     else:
-        return default
+        return default   
+    
+
+def transform_prediction(value: float) -> float:
+    if(value > threshold):
+        return ((1/2) * ((value - threshold)/(1-threshold))**(1/2)) + (1/2)
+    else:
+        return (value**2)/(2*(threshold**2))
     
     
 def predict_class(tweet: str):
     model = tf.keras.models.load_model("./models",compile=True)
-
+    tweet = tweet.upper()
     input_lenght = model.get_layer(index = 0).get_config()['input_length']
     input_tweet = text_to_tokens(tweet)
     tweet_length = len(input_tweet)
@@ -97,5 +142,5 @@ def predict_class(tweet: str):
     input_tweet = np.reshape(input_tweet, (shape[1], shape[0]))
     prediction = model.predict(input_tweet)
     prediction = prediction[0][0]
-    return prediction
+    return transform_prediction(prediction)
 

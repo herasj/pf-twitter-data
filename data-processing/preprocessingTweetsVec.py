@@ -1,3 +1,11 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Sun Nov 22 11:17:00 2020
+
+@author: kodewill
+"""
+
 #Pandas and numpy to handle csv and dataframes and other data structures
 import numpy as np
 import pandas as pd 
@@ -150,25 +158,6 @@ def split_dataset(X, y):
     return X_train, X_test, y_train, y_test, class_weight
 
 
-#Simple generic embedding model
-def EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, vocab_size, embedding_dim, num_epochs):
-    model = tf.keras.Sequential([
-        tf.keras.layers.Embedding(vocab_size, embedding_dim, input_length=input_shape),
-        tf.keras.layers.GlobalAveragePooling1D(),
-        tf.keras.layers.Dense(num_units, activation=actOne),
-        tf.keras.layers.Dropout(dropout),
-        tf.keras.layers.Dense(1, activation=actTwo)
-    ])
-    model.compile(loss='mse',optimizer=tf.keras.optimizers.Adam(learning_rate = lr), 
-                  metrics= ['accuracy'])
-    model.summary()
-    history = model.fit(X_train, y_train, epochs=num_epochs, validation_data=(X_test, y_test),
-                        class_weight=class_weights, verbose=2, batch_size=16)
-    tf.keras.models.save_model(model, filepath)
-    loss, accuracy = model.evaluate(X_test, y_test)
-    return model, accuracy
-
-
 #First Model for (Word2Vec)
 def CNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, actThree):
     model = Sequential()
@@ -181,7 +170,7 @@ def CNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape,
                       loss='mse',
                       metrics=['accuracy', get_f1])
     model.summary()
-    history = model.fit(X_train, y_train, batch_size=200, epochs=num_epochs, validation_data=(X_test, y_test), verbose=2)
+    history = model.fit(X_train, y_train, batch_size=200, epochs=20, validation_data=(X_test, y_test), verbose=2)
     tf.keras.models.save_model(model, filepath)
     loss, accuracy = model.evaluate(X_test, y_test)
     return model, accuracy
@@ -229,35 +218,13 @@ for row, element in enumerate(tweetsDF.iterrows()) :
         finalTweets[row] = {'political': tweetsDF['political'][row], 'tweet': tempString}
     else:
         delRow.append(row)
-
-#TF-IDF
-tweetsDF = tweetsDF.drop(delRow) 
-tweets = [innerDict['tweet'] for row, innerDict in finalTweets.items()]
-vocab_size = 999
-embedding_dim = 256
-word_index, tokenizedTweets = tf_idf(tweets, vocab_size)
-
-# Tokenize
-vocab_size = 1000
-embedding_dim = 256
-max_length = 500
-padding_type='post'
-oov_tok = "<OOV>"
-tokenizer = Tokenizer(num_words = vocab_size, oov_token=oov_tok)
-tokenizer.fit_on_texts(tweets)
-word_index = tokenizer.word_index
-word_index = {word: index for word, index in word_index.items() if index <= 1000}
-sequences = tokenizer.texts_to_sequences(tweets)
-pad_seq = pad_sequences(sequences, padding='post')
-tweets = pd.DataFrame(pad_seq)
-#Add aditional information (Amazon sentiment analysis)
-    
+        
 
 #word2vec
 tokenizedTweetsVec = {index: tokenizeTweet(innerDict['tweet']) for index, innerDict in finalTweets.items()}
 tokenizedTweetsVec = list(tokenizedTweetsVec.values())
 path = get_tmpfile("word2vec.model")
-model = Word2Vec(tokenizedTweets, window=5, min_count=3, workers=4)
+model = Word2Vec(tokenizedTweetsVec, window=5, min_count=3, workers=4)
 model.save("word2vec.model")
 wordVectors = model.wv
 #Fill the information
@@ -293,80 +260,22 @@ for index, palabras in tweetVectors.items():
             tweetVectors[index] = np.concatenate((tweetVectors[index], [padder]), axis=0)
 tweetsVectorsList = np.array(list(tweetVectors.values()))
 
-#Embedding
-X = np.array(tokenizedTweets)
-y = [1 if innerDict['political'] and row not in delRow else (0 if row not in delRow else None) for row, innerDict in finalTweets.items()]
+
+#CNNmodel call
+X = tweetsVectorsList
+y = [1 if innerDict['political'] and row not in delRows else (0 if row not in delRows else None) for row, innerDict in finalTweets.items()]
 y = [value for value in y if value != None]
 y = np.array(y)
 X_train, X_test, y_train, y_test, class_weights = split_dataset(X,y)
-num_units = 16
+num_units = 32
 actOne = 'relu'
 actTwo = 'sigmoid'
-input_shape = np.shape(X)[1]
-dropout = 0.39
-lr = 0.008
-num_epochs = 20
+actThree = 'softmax'
+input_shape = np.shape(X)[1:][0]
+dropout = 0.3
+lr = 0.006
+num_epochs = 15
 
 
-#Embedding
-model, accuracy = EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, vocab_size, embedding_dim, num_epochs)
-
-
-#Find best threshold
-from sklearn.metrics import roc_curve
-from matplotlib import pyplot
-from numpy import sqrt
-from numpy import argmax
-# predict probabilities
-yhat = model.predict_proba(X_test)
-# calculate roc curves
-fpr, tpr, thresholds = roc_curve(y_test, yhat)
-# calculate the g-mean for each threshold
-gmeans = sqrt(tpr * (1-fpr))
-# locate the index of the largest g-mean
-ix = argmax(gmeans)
-print('Best Threshold=%f, G-Mean=%.3f' % (thresholds[ix], gmeans[ix]))
-# plot the roc curve for the model
-pyplot.plot([0,1], [0,1], linestyle='--', label='No Skill')
-pyplot.plot(fpr, tpr, marker='.', label='Logistic')
-pyplot.scatter(fpr[ix], tpr[ix], marker='o', color='black', label='Best')
-# axis labels
-pyplot.xlabel('False Positive Rate')
-pyplot.ylabel('True Positive Rate')
-pyplot.legend()
-# show the plot
-pyplot.show()
-
-
-#Confusion matrix 
-from sklearn.metrics import confusion_matrix
-from sklearn.metrics import plot_confusion_matrix
-import matplotlib.pyplot as plt
-
-y_pred = model.predict(X_test)
-y_pred = np.array([1 if row > thresholds[ix] else 0 for row in y_pred])
-y_test = np.array(y_test)
-
-conf_matrix = confusion_matrix(y_test, y_pred)
-conf_matrix_norm = confusion_matrix(y_test, y_pred, normalize = 'true')
-
-
-#Plot confusion matrix
-class_names = ['NO POLÍTICO', 'POLÍTICO']
-import seaborn as sn
-import matplotlib.pyplot as plt
-
-
-#Conf matrix
-df_cm = pd.DataFrame(conf_matrix, index = class_names,
-                  columns = class_names)
-plt.figure(figsize = (10,7))
-sn.heatmap(df_cm, annot=True)
-
-
-#conf matrix normalized
-df_cm = pd.DataFrame(conf_matrix_norm, index = class_names,
-                  columns = class_names)
-plt.figure(figsize = (10,7))
-sn.heatmap(df_cm, annot=True)
-
+#CNN
+model, accuracy = CNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape, dropout, lr, actOne, actTwo, actThree)
