@@ -142,5 +142,5 @@ def predict_class(tweet: str):
     input_tweet = np.reshape(input_tweet, (shape[1], shape[0]))
     prediction = model.predict(input_tweet)
     prediction = prediction[0][0]
-    return transform_prediction(prediction)
+    return transform_prediction(prediction*0.7)
 
