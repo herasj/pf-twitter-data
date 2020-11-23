@@ -1,7 +1,7 @@
 import { ComprehendService } from "../config/aws/comprehend/comprehend.service";
 import { environment } from "../config/environment/environment";
 import { IStreamTweet } from "../interfaces/tweet.interface";
-import { ITrends } from "../interfaces/trends.interface";
+import { IPoliticalResponse, ITrends } from "../interfaces/trends.interface";
 import NodeGeocoder from "node-geocoder";
 import { TweetService } from "./tweet";
 import { UserService } from "./user";
@@ -9,6 +9,10 @@ import Twitter from "twitter-lite";
 import axios from "axios";
 
 export class TrendingService {
+  // private filterRegex = new RegExp(
+  //   "Poder|política|izquierda|derecha|tibio|Petro|Uribe|Duque|Farc|ELN|Disidencias|castrochavismo|cocaína|mermelada|corruptos|petristas|carroñeros|uribestias|terroristas|protesta|minga|democracia",
+  //   "i"
+  // );
   private twitter: Twitter;
   private userService: UserService;
   private tweetService: TweetService;
@@ -21,7 +25,7 @@ export class TrendingService {
     this.userService = new UserService();
     this.comprehendService = new ComprehendService();
     this.parameters = {
-      track: "#FirmesConElReferendo,Uribe,Odebrecht,Ernesto Macías",
+      track: "",
       locations: "-78.473824,1.073885,-70.124214,12.573362",
       language: "es",
     };
@@ -41,20 +45,20 @@ export class TrendingService {
   };
 
   public stream = async () => {
-    // try {
-    //   const trends: ITrends[] = await this.twitter.get("trends/place", {
-    //     id: 368148,
-    //   });
-    //   let track = "";
-    //   for (let trend of trends[0].trends) {
-    //     track += `${trend.name},`;
-    //   }
-    //   this.parameters.track = track.substring(0, track.length - 1);
-    // } catch (error) {
-    //   console.error(error.response);
-    //   throw new Error("Trending error");
-    // }
-
+    try {
+      const trends: ITrends[] = await this.twitter.get("trends/place", {
+        id: 368148,
+      });
+      let track = "";
+      for (let trend of trends[0].trends) {
+        track += `${trend.name},`;
+      }
+      this.parameters.track = track.substring(0, track.length - 1);
+    } catch (error) {
+      console.error(error.response);
+      throw new Error("Trending error");
+    }
+    console.dir(this.parameters);
     this.twitter
       .stream("statuses/filter", this.parameters)
       .on("start", (response) => console.log("Connected to Stream"))
@@ -63,10 +67,19 @@ export class TrendingService {
           if (tweet.place)
             if (tweet.place.country === "Colombia")
               if (tweet.extended_tweet) {
-                console.dir({
-                  place: tweet.place,
-                });
-                if (tweet.extended_tweet.full_text)
+                const political = await axios.post<IPoliticalResponse>(
+                  "http://54.205.200.112:8000/predict/political",
+                  {
+                    text: tweet.extended_tweet,
+                  }
+                );
+                console.dir({ political: political.data.accuracy });
+                if (
+                  tweet.extended_tweet.full_text &&
+                  political.data.accuracy > 0.6
+                  // this.filterRegex.test(tweet.extended_tweet.full_text)
+                )
+                  //console.dir(tweet.extended_tweet.full_text);
                   try {
                     const sentiment = await this.comprehendService.analyzeSentiment(
                       tweet.extended_tweet.full_text,
@@ -94,6 +107,9 @@ export class TrendingService {
                       location: {
                         latitude: location[0].latitude,
                         longitude: location[0].longitude,
+                      },
+                      accuracy: {
+                        political: political.data.accuracy,
                       },
                       sentimentScore: {
                         mixed: sentiment.SentimentScore.Mixed,
@@ -126,8 +142,23 @@ export class TrendingService {
                 if (tweet.retweeted_status)
                   if (tweet.retweeted_status.extended_tweet)
                     if (tweet.place)
-                      if (tweet.place.country === "Colombia")
-                        if (tweet.retweeted_status.extended_tweet.full_text) {
+                      if (tweet.place.country === "Colombia") {
+                        const political = await axios.post<IPoliticalResponse>(
+                          "http://54.205.200.112:8000/predict/political",
+                          {
+                            text: tweet.extended_tweet,
+                          }
+                        );
+                        if (
+                          tweet.retweeted_status.extended_tweet.full_text &&
+                          political.data.accuracy > 0.6
+                          // this.filterRegex.test(
+                          //   tweet.retweeted_status.extended_tweet.full_text
+                          // )
+                        ) {
+                          // console.dir(
+                          //   tweet.retweeted_status.extended_tweet.full_text
+                          // );
                           try {
                             const sentiment = await this.comprehendService.analyzeSentiment(
                               tweet.retweeted_status.extended_tweet.full_text,
@@ -156,6 +187,9 @@ export class TrendingService {
                               location: {
                                 latitude: location[0].latitude,
                                 longitude: location[0].longitude,
+                              },
+                              accuracy: {
+                                political: political.data.accuracy,
                               },
                               sentimentScore: {
                                 mixed: sentiment.SentimentScore.Mixed,
@@ -193,6 +227,7 @@ export class TrendingService {
                             console.dir(error);
                           }
                         }
+                      }
               }
         })()
       )

@@ -21,6 +21,13 @@ const SentimentSchema = new Schema<ISentiment>(
     timestamps: true,
   }
 );
+const AcurracySchema = new Schema(
+  {
+    political: { type: Number, required: false },
+    hate: { type: Number, required: false },
+  },
+  { _id: false, versionKey: false }
+);
 
 const LocationSchema = new Schema<ILocation>(
   {
@@ -42,6 +49,7 @@ const TweetSchema = new Schema<ITweets>(
     replies: { type: Number, required: true },
     retweets: { type: Number, required: true },
     favorites: { type: Number, required: true },
+    accuracy: AcurracySchema,
     hashtag: { type: String, required: true },
     url: { type: String, required: false },
     location: LocationSchema,

@@ -17,3 +17,8 @@ export interface ITrends {
   created_at: string;
   locations: ITrendLocation[];
 }
+
+export interface IPoliticalResponse {
+  accuracy: number;
+  error: boolean;
+}

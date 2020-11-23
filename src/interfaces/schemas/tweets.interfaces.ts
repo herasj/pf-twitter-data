@@ -9,6 +9,10 @@ export interface ITweetsModel extends Document {
   favorites: number;
   hashtag: string;
   location: ILocation;
+  accuracy: {
+    political?: number;
+    hate?: number;
+  };
   url?: string;
   sentimentScore: ISentiment;
 }
@@ -31,6 +35,10 @@ export interface ITweets {
   favorites: number;
   hashtag: string;
   location: ILocation;
+  accuracy: {
+    political?: number;
+    hate?: number;
+  };
   url?: string;
   sentimentScore: ISentiment;
 }
