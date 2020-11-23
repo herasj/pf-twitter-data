@@ -313,26 +313,45 @@ model, accuracy = EmbeddingNN(X_train, X_test, y_train, y_test, class_weights, n
 
 
 #Find best threshold
-from sklearn.metrics import roc_curve
+from sklearn.metrics import roc_curve, precision_recall_curve
 from matplotlib import pyplot
 from numpy import sqrt
 from numpy import argmax
 # predict probabilities
 yhat = model.predict_proba(X_test)
 # calculate roc curves
-fpr, tpr, thresholds = roc_curve(y_test, yhat)
+fpr, tpr, thresholdsROC = roc_curve(y_test, yhat)
 # calculate the g-mean for each threshold
 gmeans = sqrt(tpr * (1-fpr))
 # locate the index of the largest g-mean
-ix = argmax(gmeans)
-print('Best Threshold=%f, G-Mean=%.3f' % (thresholds[ix], gmeans[ix]))
+ixROC = argmax(gmeans)
+print('Best Threshold ROC=%f, G-Mean=%.3f' % (thresholdsROC[ixROC], gmeans[ixROC]))
 # plot the roc curve for the model
 pyplot.plot([0,1], [0,1], linestyle='--', label='No Skill')
 pyplot.plot(fpr, tpr, marker='.', label='Logistic')
-pyplot.scatter(fpr[ix], tpr[ix], marker='o', color='black', label='Best')
+pyplot.scatter(fpr[ixROC], tpr[ixROC], marker='o', color='black', label='Best')
 # axis labels
 pyplot.xlabel('False Positive Rate')
 pyplot.ylabel('True Positive Rate')
+pyplot.legend()
+# show the plot
+pyplot.show()
+
+# calculate pr curves
+precision, recall, thresholdsPR = precision_recall_curve(y_test, yhat)
+# convert to f score
+fscore = (2 * precision * recall) / (precision + recall)
+# locate the index of the largest f score
+ixPR = argmax(fscore)
+print('Best Threshold PR=%f, F-Score=%.3f' % (thresholdsPR[ixPR], fscore[ixPR]))
+# plot the roc curve for the model
+no_skill = len(y_test[y_test==1]) / len(y_test)
+pyplot.plot([0,1], [no_skill,no_skill], linestyle='--', label='No Skill')
+pyplot.plot(recall, precision, marker='.', label='Logistic')
+pyplot.scatter(recall[ixPR], precision[ixPR], marker='o', color='black', label='Best')
+# axis labels
+pyplot.xlabel('Recall')
+pyplot.ylabel('Precision')
 pyplot.legend()
 # show the plot
 pyplot.show()
@@ -344,7 +363,7 @@ from sklearn.metrics import plot_confusion_matrix
 import matplotlib.pyplot as plt
 
 y_pred = model.predict(X_test)
-y_pred = np.array([1 if row > thresholds[ix] else 0 for row in y_pred])
+y_pred = np.array([1 if row > (thresholdsPR[ixPR] + thresholdsROC[ixROC])/2 else 0 for row in y_pred])
 y_test = np.array(y_test)
 
 conf_matrix = confusion_matrix(y_test, y_pred)
