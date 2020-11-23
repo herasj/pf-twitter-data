@@ -146,7 +146,7 @@ export class TrendingService {
                         const political = await axios.post<IPoliticalResponse>(
                           "http://54.205.200.112:8000/predict/political",
                           {
-                            text: tweet.extended_tweet,
+                            text: tweet.retweeted_status.extended_tweet,
                           }
                         );
                         if (
