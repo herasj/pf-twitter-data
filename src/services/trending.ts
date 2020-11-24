@@ -76,7 +76,7 @@ export class TrendingService {
                 console.dir({ political: political.data.accuracy });
                 if (
                   tweet.extended_tweet.full_text &&
-                  political.data.accuracy > 0.6
+                  political.data.accuracy > 0.65
                   // this.filterRegex.test(tweet.extended_tweet.full_text)
                 )
                   //console.dir(tweet.extended_tweet.full_text);
@@ -107,6 +107,7 @@ export class TrendingService {
                       location: {
                         latitude: location[0].latitude,
                         longitude: location[0].longitude,
+                        city: tweet.place.name
                       },
                       accuracy: {
                         political: political.data.accuracy,
@@ -151,7 +152,7 @@ export class TrendingService {
                         );
                         if (
                           tweet.retweeted_status.extended_tweet.full_text &&
-                          political.data.accuracy > 0.6
+                          political.data.accuracy > 0.65
                           // this.filterRegex.test(
                           //   tweet.retweeted_status.extended_tweet.full_text
                           // )
@@ -187,6 +188,7 @@ export class TrendingService {
                               location: {
                                 latitude: location[0].latitude,
                                 longitude: location[0].longitude,
+                                city: tweet.place.name
                               },
                               accuracy: {
                                 political: political.data.accuracy,

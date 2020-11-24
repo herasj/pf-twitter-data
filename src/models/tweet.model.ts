@@ -33,6 +33,7 @@ const LocationSchema = new Schema<ILocation>(
   {
     longitude: { type: Number, required: true },
     latitude: { type: Number, required: true },
+    city: {type: String}
   },
   {
     _id: false,
