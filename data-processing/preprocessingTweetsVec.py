@@ -170,10 +170,11 @@ def CNN(X_train, X_test, y_train, y_test, class_weights, num_units, input_shape,
                       loss='mse',
                       metrics=['accuracy', get_f1])
     model.summary()
-    history = model.fit(X_train, y_train, batch_size=200, epochs=20, validation_data=(X_test, y_test), verbose=2)
+    history = model.fit(X_train, y_train, batch_size=200, epochs=num_epochs, validation_data=(X_test, y_test), verbose=2)
     tf.keras.models.save_model(model, filepath)
     loss, accuracy = model.evaluate(X_test, y_test)
     return model, accuracy
+
 
 
 def clean_tweet(tweet: str) -> str:

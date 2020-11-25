@@ -21,7 +21,12 @@
        
      "dropout_rate": {
         "_type":"uniform",
-        "_value":[0.1, 0.6]
+        "_value":[0.1, 0.7]
+    },
+    
+    "dropout_rateOne": {
+        "_type":"uniform",
+        "_value":[0.1, 0.7]
     },
     
      "lr": {
