@@ -244,7 +244,7 @@ for row, element in enumerate(tweetsDF.iterrows()) :
 #TF-IDF
 tweetsDF = tweetsDF.drop(delRow) 
 tweets = [innerDict['tweet'] for row, innerDict in finalTweets.items()]
-vocab_size = 200
+vocab_size = 400
 embedding_dim = 128
 word_index, tokenizedTweets = tf_idf(tweets, vocab_size)
 
@@ -285,13 +285,13 @@ num_epochs = 50
 # from plotly.offline import plot
 # from sklearn.decomposition import PCA
 
-# pca = PCA(n_components=2)
+# pca = PCA(n_components=3)
 # components = pca.fit_transform(X)
 
 # total_var = pca.explained_variance_ratio_.sum() * 100
 
-# fig = px.scatter(
-#     components, x=0, y=1, color=y,
+# fig = px.scatter_3d(
+#     components, x=0, y=1, z=2, color=y,
 #     title=f'Total Explained Variance: {total_var:.2f}%'
 # )
 # plot(fig)
@@ -306,7 +306,22 @@ model, accuracy = EmbeddingNN(X_train, X_test, y_train, y_test, class_weights,
 from sklearn.metrics import roc_curve, precision_recall_curve
 from matplotlib import pyplot
 from numpy import sqrt
-from numpy import argmax
+from numpy import argmax#plot pca
+import plotly.express as px
+from plotly.offline import plot
+from sklearn.decomposition import PCA
+
+pca = PCA(n_components=3)
+components = pca.fit_transform(X)
+
+total_var = pca.explained_variance_ratio_.sum() * 100
+
+fig = px.scatter_3d(
+    components, x=0, y=1, z=2, color=y,
+    title=f'Total Explained Variance: {total_var:.2f}%'
+)
+plot(fig)
+
 # predict probabilities
 yhat = model.predict_proba(X_test)
 # calculate roc curves
@@ -327,25 +342,25 @@ pyplot.legend()
 # show the plot
 pyplot.show()
 
-# calculate pr curves
-precision, recall, thresholdsPR = precision_recall_curve(y_test, yhat)
-# convert to f score
-fscore = (2 * precision * recall) / (precision + recall)
-# locate the index of the largest f score
-ixPR = sorted(range(len(precision)), key=lambda i: precision[i], reverse=True)[:6]
-ixPR = list(fscore).index(max(fscore[ixPR]))
-print('Best Threshold PR=%f, F-Score=%.3f' % (thresholdsPR[ixPR], fscore[ixPR]))
-# plot the roc curve for the model, random_state=0
-no_skill = len(y_test[y_test==1]) / len(y_test)
-pyplot.plot([0,1], [no_skill,no_skill], linestyle='--', label='No Skill')
-pyplot.plot(recall, precision, marker='.', label='Logistic')
-pyplot.scatter(recall[ixPR], precision[ixPR], marker='o', color='black', label='Best')
-# axis labels
-pyplot.xlabel('Recall')
-pyplot.ylabel('Precision')
-pyplot.legend()
-# show the plot
-pyplot.show()
+# # calculate pr curves
+# precision, recall, thresholdsPR = precision_recall_curve(y_test, yhat)
+# # convert to f score
+# fscore = (2 * precision * recall) / (precision + recall)
+# # locate the index of the largest f score
+# ixPR = sorted(range(len(precision)), key=lambda i: precision[i], reverse=True)[:6]
+# ixPR = list(fscore).index(max(fscore[ixPR]))
+# print('Best Threshold PR=%f, F-Score=%.3f' % (thresholdsPR[ixPR], fscore[ixPR]))
+# # plot the roc curve for the model, random_state=0
+# no_skill = len(y_test[y_test==1]) / len(y_test)
+# pyplot.plot([0,1], [no_skill,no_skill], linestyle='--', label='No Skill')
+# pyplot.plot(recall, precision, marker='.', label='Logistic')
+# pyplot.scatter(recall[ixPR], precision[ixPR], marker='o', color='black', label='Best')
+# # axis labels
+# pyplot.xlabel('Recall')
+# pyplot.ylabel('Precision')
+# pyplot.legend()
+# # show the plot
+# pyplot.show()
 
 
 #Confusion matrix 
