@@ -108,7 +108,7 @@ def clean_tweet(tweet: str) -> str:
 def text_to_tokens(tweet: str):
     default = np.zeros(24)
     tempString = clean_tweet(tweet)
-    words_bag = load_obj("word_bag")
+    words_bag = load_obj("word_index")
     #Validate and drop empty text after processing
     if(len(tempString)>1):
         tempString = stanford_lemma(tempString)
