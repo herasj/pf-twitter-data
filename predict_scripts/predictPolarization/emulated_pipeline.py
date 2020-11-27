@@ -16,7 +16,7 @@ stanLemma = stanza.Pipeline(processors='tokenize,mwt,pos,lemma', lang='es', use_
 from nltk.tokenize import word_tokenize # Word to tokens
 import keras.backend as K
 
-threshold = 0.5555693
+threshold = 0.5
 
 def get_f1(y_true, y_pred): #taken from old keras source code
     true_positives = K.sum(K.round(K.clip(y_true * y_pred, 0, 1)))
@@ -127,7 +127,7 @@ def transform_prediction(value: float) -> float:
         return (value**2)/(2*(threshold**2))
     
     
-def predict_class(tweet: str):
+def predict_polarization(tweet: str):
     model = tf.keras.models.load_model("./models",compile=True)
     tweet = tweet.upper()
     input_lenght = model.get_layer(index = 0).get_config()['input_length']
@@ -142,5 +142,5 @@ def predict_class(tweet: str):
     input_tweet = np.reshape(input_tweet, (shape[1], shape[0]))
     prediction = model.predict(input_tweet)
     prediction = prediction[0][0]
-    return transform_prediction(prediction*0.7)
+    return transform_prediction(prediction)
 
